@@ -1,5 +1,5 @@
 /* 
- * Aardwold mobile runtime library.
+ * Aardwolf mobile runtime library.
  *
  * Do not enable JS strict mode for this file as it 
  * will disable some functionality this library depends on.
