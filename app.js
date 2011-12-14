@@ -29,7 +29,9 @@ if (!config.serverHost) {
 }
 
 var server = require('./server/server.js');
-var debugFileServer = require('./server/debug-file-server.js');
+//var debugFileServer = require('./server/debug-file-server.js');
+var debugProxyServer = require('./server/debug-proxy-server.js');
 
 server.run();
-debugFileServer.run();
+//debugFileServer.run();
+debugProxyServer.run();

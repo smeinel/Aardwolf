@@ -3,9 +3,13 @@
     "description": "Aardwolf debugger",
     "url": "http://lexandera.com/aardwolf",
     "author": "Aleksander Kmetec <aleksander.kmetec@gmail.com>",
+    "contributors": [
+		{ "name": "Steve Meinel", "email": "steve.meinel@caltech.edu" }
+	],
     "dependencies": {
         "coffee-script": "1.1.2",
-        "optimist": "0.2.6"
+        "optimist": "0.2.6",
+        "http-proxy": "0.7.6"
     },
     "version": "0.0.0"
 }
