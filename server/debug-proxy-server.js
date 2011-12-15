@@ -26,6 +26,7 @@
 'use strict';
 
 var http = require('http');
+var httpProxy = require('http-proxy');
 var path = require('path');
 var fs = require('fs');
 var url = require('url');
@@ -34,18 +35,59 @@ var config = require('../config/config.defaults.js');
 var util = require('./server-util.js');
 
 function run() {
+	var hostName = config.serverHost ? config.serverHost : null;
+	
     if (!config.proxyServer) {
         console.error('ERROR: Proxy server not configured!');
         process.exit(1);
     }
     
-    http.createServer(DebugProxyServer).listen(config.fileServerPort, null, function() {
-        console.log('Proxy server listening for requests on port ' + config.fileServerPort + '.');
+	httpProxy.createServer(function (req, res, proxy) {
+	    var requestedFile = url.parse(req.url).pathname;
+		var i, len, debug = false;
+		
+		len = config.proxyServer.debug.length;
+		console.log("There are " + len + " debug items")
+	    console.log(requestedFile);
+		console.log("")
+		for (i = 0; i < len; i += 1) {
+			debug = debug || (config.proxyServer.debug[i] === requestedFile);
+		}
+	
+	    /* alias for serving the debug library */
+	    if (requestedFile.toLowerCase() === '/aardwolf.js' || debug) {
+	    	console.log("forwarding to local")
+			proxy.proxyRequest(req, res, {
+				host: hostName,
+				port: config.fileServerPort
+			});
+	    } else {
+	    	console.log("forwarding to remote")
+			proxy.proxyRequest(req, res, {
+				host: config.proxyServer.host,
+				port: config.proxyServer.port
+			});
+		}
+	}).listen(10000);
+    
+    http.createServer(DebugProxyServer).listen(config.fileServerPort, hostName, function() {
+        console.log('DebugProxyServer listening for requests on ' + hostName + ":" + config.fileServerPort);
     });
 };
 
 function DebugProxyServer(req, res) {
-	
+    var requestedFile = url.parse(req.url).pathname;
+
+    /* alias for serving the debug library */
+    if (requestedFile.toLowerCase() === '/aardwolf.js') {
+        util.serveStaticFile(res, path.join(__dirname, '../js/aardwolf.js'));
+    } else {
+	    console.log(req.url);
+	    console.log(requestedFile);
+	    
+		res.writeHead(404, {'Content-Type': 'text/plain'});
+		res.end('NOT FOUND');
+	}
 };
 
 module.exports.run = run;
