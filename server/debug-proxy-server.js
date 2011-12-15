@@ -91,6 +91,7 @@ function DebugProxyServer(req, res) {
 			proxyRes.on('end', function () {
 				var rewriter = require('../rewriter/jsrewriter.js');
 				var fileName = requestedFile.split("/").pop();
+		        fs.writeFileSync(path.join(config.fileServerBaseDir, fileName), remoteData.join(""));
 				remoteData = rewriter.addDebugStatements(fileName, remoteData.join(""));
 		        res.writeHead(200, {'Content-Type': 'application/javascript'});
 		        res.end(remoteData);
