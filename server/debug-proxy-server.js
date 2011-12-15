@@ -47,22 +47,17 @@ function run() {
 		var i, len, debug = false;
 		
 		len = config.proxyServer.debug.length;
-		console.log("There are " + len + " debug items")
-	    console.log(requestedFile);
-		console.log("")
-		for (i = 0; i < len; i += 1) {
+		for (i = 0; i < len && !debug; i += 1) {
 			debug = debug || (config.proxyServer.debug[i] === requestedFile);
 		}
 	
-	    /* alias for serving the debug library */
+	    /* aardwolf.js needs to be served from the local filesystem */
 	    if (requestedFile.toLowerCase() === '/aardwolf.js' || debug) {
-	    	console.log("forwarding to local")
 			proxy.proxyRequest(req, res, {
 				host: hostName,
 				port: config.fileServerPort
 			});
 	    } else {
-	    	console.log("forwarding to remote")
 			proxy.proxyRequest(req, res, {
 				host: config.proxyServer.host,
 				port: config.proxyServer.port
@@ -78,15 +73,38 @@ function run() {
 function DebugProxyServer(req, res) {
     var requestedFile = url.parse(req.url).pathname;
 
-    /* alias for serving the debug library */
+    /* Serve the debug library from the local file system */
     if (requestedFile.toLowerCase() === '/aardwolf.js') {
         util.serveStaticFile(res, path.join(__dirname, '../js/aardwolf.js'));
-    } else {
-	    console.log(req.url);
-	    console.log(requestedFile);
-	    
-		res.writeHead(404, {'Content-Type': 'text/plain'});
-		res.end('NOT FOUND');
+    } else if (requestedFile.substr(-3) === '.js') {
+		var remoteData = [];
+		var options = {
+			host: config.proxyServer.host,
+			port: config.proxyServer.port,
+			path: requestedFile
+		};
+    	var proxyReq = http.request(options, function (proxyRes) {
+			proxyRes.setEncoding('utf8');
+			proxyRes.on('data', function (chunk) {
+				remoteData.push(chunk);
+			});
+			proxyRes.on('end', function () {
+				var rewriter = require('../rewriter/jsrewriter.js');
+				var fileName = requestedFile.split("/").pop();
+				remoteData = rewriter.addDebugStatements(fileName, remoteData.join(""));
+		        res.writeHead(200, {'Content-Type': 'application/javascript'});
+		        res.end(remoteData);
+			});
+		});
+		proxyReq.on('error', function (err) {
+			res.writeHead(500, {'Content-Type': 'text/plain'});
+			res.end("Failed to get Remote file: " + requestedFile + "\n" + err.message);
+		});
+		proxyReq.end();
+	} else {
+	    console.log("Cannot handle file: " + requestedFile);
+		res.writeHead(500, {'Content-Type': 'text/plain'});
+		res.end("Cannot handle file: " + requestedFile);
 	}
 };
 
