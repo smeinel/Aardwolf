@@ -30,6 +30,7 @@ var httpProxy = require('http-proxy');
 var path = require('path');
 var fs = require('fs');
 var url = require('url');
+var colors = require("colors");
 
 var config = require('../config/config.defaults.js');
 var util = require('./server-util.js');
@@ -42,6 +43,8 @@ function run() {
         process.exit(1);
     }
     
+    console.log('Proxy'.bold + ' listening for requests on ' + (hostName).green + ":" + ( config.proxyPort + "").cyan);
+    
 	httpProxy.createServer(function (req, res, proxy) {
 	    var requestedFile = url.parse(req.url).pathname;
 		var i, len, debug = false;
@@ -53,20 +56,28 @@ function run() {
 	
 	    /* aardwolf.js needs to be served from the local filesystem */
 	    if (requestedFile.toLowerCase() === '/aardwolf.js' || debug) {
+	    	console.log('Local: ' + requestedFile.cyan);
 			proxy.proxyRequest(req, res, {
 				host: hostName,
 				port: config.fileServerPort
 			});
+		} else if (requestedFile.indexOf('/mobile/') !== -1) {
+	    	console.log('Server: ' + requestedFile.yellow);
+			proxy.proxyRequest(req, res, {
+				host: hostName,
+				port: config.serverPort
+			});
 	    } else {
+	    	//console.log('Remote: ' + requestedFile.yellow);
 			proxy.proxyRequest(req, res, {
 				host: config.proxyServer.host,
 				port: config.proxyServer.port
 			});
 		}
-	}).listen(10000);
+	}).listen(config.proxyPort);
     
     http.createServer(DebugProxyServer).listen(config.fileServerPort, hostName, function() {
-        console.log('DebugProxyServer listening for requests on ' + hostName + ":" + config.fileServerPort);
+        console.log('DebugProxyServer'.bold + ' listening for requests on ' + (hostName).green + ":" + ( config.fileServerPort + "").cyan);
     });
 };
 
@@ -91,9 +102,14 @@ function DebugProxyServer(req, res) {
 			proxyRes.on('end', function () {
 				var rewriter = require('../rewriter/jsrewriter.js');
 				var fileName = requestedFile.split("/").pop();
+				console.log('DebugProxyServer'.bold + ' storing & instrumenting remote file ' + (fileName).green + " for debugging");
 		        fs.writeFileSync(path.join(config.fileServerBaseDir, fileName), remoteData.join(""));
-				remoteData = rewriter.addDebugStatements(fileName, remoteData.join(""));
-		        res.writeHead(200, {'Content-Type': 'application/javascript'});
+				remoteData = rewriter.addDebugStatements("/" + fileName, remoteData.join(""));
+		        res.writeHead(200, {
+		        	'Content-Type': 'application/javascript',
+		        	'Access-Control-Allow-Origin': '*',
+			    	'Access-Control-Allow-Headers': 'X-Requested-With'
+			    });
 		        res.end(remoteData);
 			});
 		});

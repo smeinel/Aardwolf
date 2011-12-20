@@ -20,11 +20,15 @@ function serveStaticFile(res, filename) {
         fdata = fdata
             .toString()
             .replace(/__SERVER_HOST__/g, config.serverHost)
-            .replace(/__SERVER_PORT__/g, config.serverPort)
+            .replace(/__SERVER_PORT__/g, (config.proxyPort) ? config.proxyPort : config.serverPort)
             .replace(/__FILE_SERVER_PORT__/g, config.fileServerPort);
     }
     
-    res.writeHead(200, { 'Content-Type': ct });
+    res.writeHead(200, { 
+    	'Content-Type': ct,
+    	'Access-Control-Allow-Origin': '*',
+    	'Access-Control-Allow-Headers': 'X-Requested-With'
+    });
     res.end(fdata);
 }
 
@@ -57,7 +61,12 @@ function getFilesList() {
     return files;
 }
 
+function getBreakpointsList () {
+	return config.breakpoints;
+}
+
 
 module.exports.serveStaticFile = serveStaticFile;
 module.exports.getFilesList = getFilesList;
+module.exports.getBreakpointsList = getBreakpointsList;
 

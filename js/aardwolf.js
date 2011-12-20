@@ -87,6 +87,7 @@ window.Aardwolf = new (function() {
     }
     
     function processCommand(cmd) {
+        alert(cmd.command);
         switch (cmd.command) {
             case 'set-breakpoints':
                 breakpoints = {};

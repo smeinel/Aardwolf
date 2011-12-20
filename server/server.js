@@ -9,13 +9,15 @@ var http = require('http');
 var path = require('path');
 var fs = require('fs');
 
+var colors = require("colors");
+
 var config = require('../config/config.defaults.js');
 var util = require('./server-util.js');
 
 function run() {
     /* Server for web service ports and debugger UI */
     http.createServer(AardwolfServer).listen(config.serverPort, null, function() {
-        console.log('Server listening for requests on port ' + config.serverPort + '.');
+        console.log('Server listening for requests on port ' + (config.serverPort + '').cyan);
     });
 }
 
@@ -25,7 +27,7 @@ var desktopDispatcher = new Dispatcher();
 function AardwolfServer(req, res) {
     res.setHeader('Cache-Control', 'no-cache');
     res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Headers', 'Origin, Content-Type');
+    res.setHeader('Access-Control-Allow-Headers', 'Origin, Content-Type, X-Requested-With');
     res.setHeader('Access-Control-Allow-Methods', 'POST, GET, OPTIONS');
     res.setHeader('Access-Control-Allow-Credentials', 'true');
     
@@ -46,6 +48,8 @@ function AardwolfServer(req, res) {
     function processPostedData(data) {
         switch (req.url) {
             case '/mobile/init':
+            	console.log("AardwolfServer: " + req.url.red);
+            	console.log("AardwolfServer: " + JSON.stringify(data).yellow);
                 mobileDispatcher.end();
                 mobileDispatcher = new Dispatcher();
                 mobileDispatcher.setClient(res);
@@ -54,40 +58,53 @@ function AardwolfServer(req, res) {
                 break;
                 
             case '/mobile/console':
+            	console.log("AardwolfServer: " + req.url.red);
                 desktopDispatcher.addMessage(data);
                 ok200();
                 break;
                 
             case '/mobile/breakpoint':
+            	console.log("AardwolfServer: " + req.url.red);
                 desktopDispatcher.addMessage(data);
                 mobileDispatcher.setClient(res);
                 break;
                 
             case '/mobile/incoming':
+            	console.log("AardwolfServer: " + req.url.red);
                 mobileDispatcher.setClient(res);
                 break;
                 
             case '/desktop/outgoing':
+            	console.log("AardwolfServer: " + req.url.blue);
                 mobileDispatcher.addMessage(data);
                 ok200();
                 break;
                 
             case '/desktop/incoming':
+            	console.log("AardwolfServer: " + req.url.blue);
                 desktopDispatcher.setClient(res);
                 break;
                 
             case '/files/list':
+            	console.log("AardwolfServer: " + req.url.blue);
                 ok200({ files: util.getFilesList() });
+                break;
+                
+            case '/breakpoints/list':
+            	console.log("AardwolfServer: " + req.url.blue);
+                ok200({ breakpoints: util.getBreakpointsList() });
                 break;
                 
             case '/':
             case '/ui':
             case '/ui/':
+            	console.log("AardwolfServer: " + req.url.blue);
                 res.writeHead(302, {'Location': '/ui/index.html'});
                 res.end();
                 break;
                 
             default:
+            	console.log("AardwolfServer: " + req.url.green);
                 /* check if we need to serve a UI file */
                 if (req.url.indexOf('/ui/') === 0) {
                     var requestedFile = req.url.substr(4);
@@ -121,7 +138,11 @@ function AardwolfServer(req, res) {
     }
     
     function ok200(data) {
-        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.writeHead(200, { 
+        	'Content-Type': 'application/json',
+	    	'Access-Control-Allow-Origin': '*',
+	    	'Access-Control-Allow-Headers': 'X-Requested-With'
+        });
         res.end(JSON.stringify(data || {}));
     }
 }
@@ -132,30 +153,40 @@ function Dispatcher() {
     var client;
     
     this.setClient = function(c) {
+		console.log("Dispatcher: ".yellow.bold + "setClient".red);
         this.end();
         client = c;
         process();
     };
     
     this.addMessage = function(m) {
+		console.log("Dispatcher: ".yellow.bold + "addMessage ".red + JSON.stringify(m).cyan);
         queue.push(m);
         process();
     };
     
     this.end = function() {
+		console.log("Dispatcher: ".yellow.bold + "end".red);
         if (client) {
             client.end();
         }
     };
     
     this.clearMessages = function() {
+		console.log("Dispatcher: ".yellow.bold + "clearMessages".red);
         queue = [];
     };
     
     function process() {
+		console.log("Dispatcher: ".yellow.bold + "process".red);
         if (client && queue.length > 0) {
-            client.writeHead(200, { 'Content-Type': 'application/json' });
+            client.writeHead(200, { 
+            	'Content-Type': 'application/json',
+		    	'Access-Control-Allow-Origin': '*',
+		    	'Access-Control-Allow-Headers': 'X-Requested-With'
+            });
             var msg = queue.shift();
+            console.log('Dispatching'.cyan);
             client.end(JSON.stringify(msg));
             client = null;
         }

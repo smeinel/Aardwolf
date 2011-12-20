@@ -12,10 +12,7 @@ var $stepOutBtn;
 var $stackTrace;
 
 $(function() {
-    $('#breakpoints').val(JSON.stringify([
-        ['/calc.js', 11], ['/calc.js', 25], ['/calc.js', 37],
-        ['/calc.coffee', 11], ['/calc.coffee', 21]
-    ]));
+    $('#breakpoints').val("");
     $('#eval').val("");
     
     $('#btn-update-breakpoints').click(updateBreakpoints);
@@ -37,7 +34,7 @@ $(function() {
     $codeContainer = $('#code-container');
     $code = $('#code');
     
-    loadSourceFiles();
+    initDebugger();
     listenToServer();
     
     showFile({ file: $('#file-switcher').val() });
@@ -45,7 +42,8 @@ $(function() {
 
 function initDebugger() {
     loadSourceFiles();
-    postToServer({ command: 'set-breakpoints', data: JSON.parse($('#breakpoints').val()) });
+    //postToServer({ command: 'set-breakpoints', data: JSON.parse($('#breakpoints').val()) });
+    loadBreakpoints();
 }
 
 function loadSourceFiles() {
@@ -60,6 +58,15 @@ function loadSourceFiles() {
         files[f] = fdata.data;
         addToFileSwitcher(f, f);
     });
+}
+
+function loadBreakpoints() {
+	var breakpointList = getFromServer('/breakpoints/list');
+	if (breakpointList) {
+		$('#breakpoints').val(JSON.stringify(breakpointList.breakpoints));
+	} else {
+		$('#breakpoints').empty();
+	}
 }
 
 function updateBreakpoints() {

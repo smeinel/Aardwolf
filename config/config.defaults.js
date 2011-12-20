@@ -23,6 +23,15 @@ config.fileServerBaseDir = path.join(__dirname, '../samples');
 /* Port on which files will be served */
 config.fileServerPort = 8500;
 
+/* Default list of breakpoints to set if not overridden in config.local.js	*/
+config.breakpoints = [
+    ['/calc.js', 11],
+    ['/calc.js', 25],
+    ['/calc.js', 37],
+    ['/calc.coffee', 11],
+    ['/calc.coffee', 21]
+];
+
 
 
 module.exports = config;
